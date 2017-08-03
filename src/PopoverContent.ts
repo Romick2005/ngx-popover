@@ -17,7 +17,7 @@ import {Popover} from "./Popover";
     <div class="popover-content">
         <ng-content></ng-content>
         {{ content }}
-    </div> 
+    </div>
 </div>
 `,
     styles: [`
@@ -27,23 +27,23 @@ import {Popover} from "./Popover";
     position: absolute;
 }
 .popover.top .virtual-area {
-    bottom: -11px; 
+    bottom: -11px;
 }
 .popover.bottom .virtual-area {
-    top: -11px; 
+    top: -11px;
 }
 .popover.left .virtual-area {
-    right: -11px; 
+    right: -11px;
 }
 .popover.right .virtual-area {
-    left: -11px; 
+    left: -11px;
 }
 `]
 })
 export class PopoverContent implements AfterViewInit, OnDestroy {
 
     // -------------------------------------------------------------------------
-    // Inputs / Outputs 
+    // Inputs / Outputs
     // -------------------------------------------------------------------------
 
     // @Input()
@@ -83,7 +83,7 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
     effectivePlacement: string;
 
     // -------------------------------------------------------------------------
-    // Anonymous 
+    // Anonymous
     // -------------------------------------------------------------------------
 
     /**
@@ -114,9 +114,9 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
     listenMouseFunc: any;
     ngAfterViewInit(): void {
         if (this.closeOnClickOutside)
-            this.listenClickFunc = this.renderer.listenGlobal("document", "mousedown", (event: any) => this.onDocumentMouseDown(event));               
+            this.listenClickFunc = this.renderer.listenGlobal("document", "mousedown", (event: any) => this.onDocumentMouseDown(event));
         if (this.closeOnMouseOutside)
-            this.listenMouseFunc = this.renderer.listenGlobal("document", "mouseover", (event: any) => this.onDocumentMouseDown(event));  
+            this.listenMouseFunc = this.renderer.listenGlobal("document", "mouseover", (event: any) => this.onDocumentMouseDown(event));
 
         this.show();
         this.cdr.detectChanges();
@@ -162,7 +162,7 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
     // -------------------------------------------------------------------------
 
     protected positionElements(hostEl: HTMLElement, targetEl: HTMLElement, positionStr: string, appendToBody: boolean = false): { top: number, left: number } {
-        let positionStrParts = positionStr.split("-");
+        let positionStrParts = positionStr.split(" ");
         let pos0 = positionStrParts[0];
         let pos1 = positionStrParts[1] || "center";
         let hostElPos = appendToBody ? this.offset(hostEl) : this.position(hostEl);
@@ -179,7 +179,7 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
                 return hostElPos.left;
             },
             right: function (): number {
-                return hostElPos.left + hostElPos.width;
+                return hostElPos.left + hostElPos.width - targetElWidth;
             }
         };
 
