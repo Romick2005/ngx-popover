@@ -4,15 +4,14 @@ import {Popover} from "./Popover";
 @Component({
     selector: "popover-content",
     template: `
-<div #popoverDiv class="popover {{ effectivePlacement }}"
-     [style.top]="top + 'px'"
-     [style.left]="left + 'px'"
+<div #popoverDiv class="popover {{ effectivePlacement }} {{ currentPlacement }}"
+     [ngStyle]="{'left': left + 'px', 'top': top + 'px', 'display': 'block'}"
      [class.in]="isIn"
-     [class.fade]="animation"
-     style="display: block"
-     role="popover">
+     [class.fade]="animation">
     <div [hidden]="!closeOnMouseOutside" class="virtual-area"></div>
-    <div class="arrow"></div> 
+    <div class="arrow"
+        [ngStyle]="{'left': arrowLeft + 'px', 'top': arrowTop + 'px'}">
+    </div>
     <h3 class="popover-title" [hidden]="!title">{{ title }}</h3>
     <div class="popover-content">
         <ng-content></ng-content>
@@ -21,6 +20,10 @@ import {Popover} from "./Popover";
 </div>
 `,
     styles: [`
+
+.popover {
+    margin-top: 0px;
+}
 .popover .virtual-area {
     height: 11px;
     width: 100%;
@@ -37,6 +40,45 @@ import {Popover} from "./Popover";
 }
 .popover.right .virtual-area {
     left: -11px;
+}
+
+.popover.top-left>.arrow:after {
+    top: -12px;
+    margin-left: -10px;
+}
+.popover.top-center>.arrow:after {
+    top: -12px;
+    margin-left: -10px;
+}
+.popover.top-right>.arrow:after {
+    top: -12px;
+    margin-left: -10px;
+}
+
+
+.popover.center-left>.arrow:after {
+    top: 1px;
+    margin-left: -10px;
+}
+.popover.center-center>.arrow:after {
+    top: 1px;
+    margin-left: -10px;
+}
+.popover.center-right>.arrow:after {
+    top: 1px;
+    margin-left: -10px;
+}
+
+
+.popover.bottom-left>.arrow:after,
+.popover.bottom-center>.arrow:after,
+.popover.bottom-right>.arrow:after
+ {
+    content: " ";
+    top: 1px;
+    margin-left: -10px;
+    border-top-width: 0;
+    border-bottom-color: #fff;
 }
 `]
 })
@@ -78,9 +120,12 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
     onCloseFromOutside = new EventEmitter();
     top: number = -10000;
     left: number = -10000;
+    arrowLeft: number = -10000;
+    arrowTop: number = -10000;
     isIn: boolean = false;
     displayType: string = "none";
     effectivePlacement: string;
+    currentPlacement: string;
 
     // -------------------------------------------------------------------------
     // Anonymous
@@ -95,7 +140,7 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
         if (element.contains(event.target) || this.popover.getElement().contains(event.target)) return;
         this.hide();
         this.onCloseFromOutside.emit(undefined);
-    };
+    }
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -141,6 +186,8 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
         this.displayType = "block";
         this.top = p.top;
         this.left = p.left;
+        this.arrowLeft = p.arrowLeft;
+        this.arrowTop = p.arrowTop;
         this.isIn = true;
     }
 
@@ -161,72 +208,101 @@ export class PopoverContent implements AfterViewInit, OnDestroy {
     // Protected Methods
     // -------------------------------------------------------------------------
 
-    protected positionElements(hostEl: HTMLElement, targetEl: HTMLElement, positionStr: string, appendToBody: boolean = false): { top: number, left: number } {
-        let positionStrParts = positionStr.split(" ");
-        let pos0 = positionStrParts[0];
-        let pos1 = positionStrParts[1] || "center";
+    protected positionElements(hostEl: HTMLElement, targetEl: HTMLElement, positionStr: string, appendToBody: boolean = false): { top: number, left: number, arrowLeft: number, arrowTop: number } {
+        let positionStrParts = positionStr.split("-");
+        let posY = positionStrParts[0];
+        let posX = positionStrParts[1] || "center";
         let hostElPos = appendToBody ? this.offset(hostEl) : this.position(hostEl);
         let targetElWidth = targetEl.offsetWidth;
         let targetElHeight = targetEl.offsetHeight;
 
-        this.effectivePlacement = pos0 = this.getEffectivePlacement(pos0, hostEl, targetEl);
+        this.currentPlacement = positionStrParts.join("-");
+        const popoverNativeEl = this.popoverDiv.nativeElement;
+        const arrowNativeEl = popoverNativeEl.querySelector(".arrow");
+        this.effectivePlacement = posY; // posX = this.getEffectivePlacement(posX, hostEl, targetEl);
+        const arrowHeight = 11; // arrowNativeEl.offsetHeight / 2
 
-        let shiftWidth: any = {
-            center: function (): number {
-                return hostElPos.left + hostElPos.width / 2 - targetElWidth / 2;
-            },
-            left: function (): number {
-                return hostElPos.left;
-            },
-            right: function (): number {
-                return hostElPos.left + hostElPos.width - targetElWidth;
-            }
-        };
-
-        let shiftHeight: any = {
-            center: function (): number {
-                return hostElPos.top + hostElPos.height / 2 - targetElHeight / 2;
-            },
-            top: function (): number {
-                return hostElPos.top;
-            },
-            bottom: function (): number {
-                return hostElPos.top + hostElPos.height;
-            }
-        };
-
-        let targetElPos: { top: number, left: number };
-        switch (pos0) {
-            case "right":
-                targetElPos = {
-                    top: shiftHeight[pos1](),
-                    left: shiftWidth[pos0]()
-                };
-                break;
-
+        const getX = (): { left: number, arrowLeft: number } =>  {
+            const arrowCenterX = hostElPos.width / 2 - arrowNativeEl.offsetWidth / 2;
+            switch (posX) {
             case "left":
-                targetElPos = {
-                    top: shiftHeight[pos1](),
-                    left: hostElPos.left - targetElWidth
+                return {
+                    left: hostElPos.left,
+                    arrowLeft: arrowCenterX
                 };
-                break;
+            case "center":
+                return {
+                    left: hostElPos.left + hostElPos.width / 2 - targetElWidth / 2,
+                    arrowLeft:  targetElWidth / 2
+                };
+            case "right":
+                return {
+                    left: hostElPos.left + hostElPos.width - targetElWidth,
+                    arrowLeft: targetElWidth - hostElPos.width / 2
+                };
+            }
+        };
 
+        const getY = (): { top: number, arrowTop: number } => {
+            const arrowCenterY = hostElPos.height / 2 - arrowNativeEl.offsetHeight / 2;
+            switch (posY) {
+            case "top":
+                return {
+                    top: hostElPos.top - targetElHeight - arrowHeight,
+                    arrowTop: targetElHeight
+                };
+            case "center":
+                return {
+                    top: hostElPos.top + hostElPos.height / 2 - targetElHeight / 2,
+                    arrowTop:  targetElHeight / 2
+                };
             case "bottom":
-                targetElPos = {
-                    top: shiftHeight[pos0](),
-                    left: shiftWidth[pos1]()
+                return {
+                    top: hostElPos.top + hostElPos.height + arrowHeight,
+                    arrowTop: -arrowHeight
                 };
-                break;
+            }
+        };
+        let yData = getY();
+        let xData = getX();
+        return {
+            top: yData.top,
+            left: xData.left,
+            arrowLeft: xData.arrowLeft,
+            arrowTop: yData.arrowTop
+        };
 
-            default:
-                targetElPos = {
-                    top: hostElPos.top - targetElHeight,
-                    left: shiftWidth[pos1]()
-                };
-                break;
+        /*switch (posX) {
+        case "right":
+        case "left":
+            let yData = getY[posY]();
+            return {
+                top: yData.top,
+                left: (posX === "right" ? getX[posX]() : hostElPos.left - targetElWidth),
+                arrowLeft: 0,
+                arrowTop: yData.arrowTop
+            };
+            break;
+        case "bottom":
+        case: "top":
+            let xData = getY[posX]();
+            return {
+                top: ("bottom" ? getY[posX]() : hostElPos.top - targetElHeight),
+                left: getX[posY](),
+                arrowLeft: ,
+                arrowTop:
+            };
+            break;*/
+/*        default:
+            throw new Error("[positionElements] Illegal position!");
+
         }
-
-        return targetElPos;
+            return {
+                top: top,
+                left: left,
+                arrowLeft: arrowLeft,
+                arrowTop: arrowTop
+            };*/
     }
 
     protected position(nativeEl: HTMLElement): { width: number, height: number, top: number, left: number } {
